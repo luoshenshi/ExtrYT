@@ -84,7 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       async function startDownloading() {
         try {
-          let response = await fetch("http://localhost:3000/download", {
+          let response = await fetch("/download", {
             method: "POST",
             body: bodyContent,
             headers: headersList,
