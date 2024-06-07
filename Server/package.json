@@ -1,0 +1,17 @@
+{
+  "name": "advance-yt-downloader",
+  "version": "1.0.0",
+  "description": "this is just cool",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "luoshenshi",
+  "license": "MIT",
+  "dependencies": {
+    "child_process": "^1.0.2",
+    "express": "^4.19.2",
+    "ytdl-core": "^4.11.5"
+  }
+}

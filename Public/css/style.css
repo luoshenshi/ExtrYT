@@ -1,0 +1,88 @@
+body {
+  padding: 20px;
+  background-color: rgb(156 173 255);
+}
+
+.custom-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  /* border: 1px dashed black; */
+  padding: 10px 0;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  box-shadow: 0 0 7px 0.2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 10px 0.5px rgba(0, 0, 0, 0.19) inset;
+}
+
+.custom-container .container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.wrapper {
+  padding: 10px;
+  width: 100%;
+}
+
+.range-container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.range-container input[type="number"] {
+  width: 60px;
+  margin-left: 10px;
+  background-color: transparent;
+  border: none;
+  box-shadow: 0 0 7px 0.2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 10px 0.5px rgba(0, 0, 0, 0.19) inset;
+}
+
+.form-control {
+  border: none;
+  background-color: transparent;
+  box-shadow: 0 0 7px 0.2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 10px 0.5px rgba(0, 0, 0, 0.19) inset;
+}
+.form-control:focus {
+  border: none;
+  background-color: transparent;
+  box-shadow: 0 0 7px 0.2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 10px 0.5px rgba(0, 0, 0, 0.19) inset;
+}
+
+@media (min-width: 768px) {
+  .custom-container .container {
+    flex-direction: row;
+  }
+
+  .wrapper {
+    flex: 1;
+  }
+
+  .range-container {
+    flex-direction: row;
+  }
+
+  .range-container input[type="number"] {
+    margin-left: 20px;
+  }
+}
+
+.download-button-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.form-control {
+  max-width: 600px;
+  margin: auto;
+}
