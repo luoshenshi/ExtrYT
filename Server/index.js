@@ -11,7 +11,7 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(express.static(path.join(__dirname.replace("Server", ""), "Public")));
+app.use(express.static(path.join(__dirname.replace("Server", "Public"))));
 app.use(bodyParser.json());
 
 app.post("/download", async (req, res) => {
@@ -30,8 +30,7 @@ app.post("/download", async (req, res) => {
     );
 
     const videoPath = path.join(
-      __dirname.replace("Server", ""),
-      "Cache",
+      __dirname.replace("Server", "Cache"),
       "video.mp4"
     );
 
@@ -42,7 +41,7 @@ app.post("/download", async (req, res) => {
       .pipe(output)
       .on("finish", () => {
         exec(
-          `python ./Python/slowAndReverb.py ${videoPath} ${speed} ${roomSize} ${dryLevel} ${wetLevel} ./Out/output.wav`,
+          `python ../Python/slowAndReverb.py ${videoPath} ${speed} ${roomSize} ${dryLevel} ${wetLevel} ./Out/output.wav`,
           (error, stdout, stderr) => {
             if (error) {
               console.error(`exec error: ${error}`);
@@ -50,8 +49,7 @@ app.post("/download", async (req, res) => {
               return;
             }
             const audioFilePath = path.join(
-              __dirname.replace("Server", ""),
-              "Out",
+              __dirname.replace("Server", "Out"),
               "output.wav"
             );
             console.log(audioFilePath);
