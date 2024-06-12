@@ -1,4 +1,4 @@
 asyncio
 pydub
 moviepy
-pedalboard==0.5.2
+pedalboard
