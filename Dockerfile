@@ -1,6 +1,6 @@
 WORKDIR /usr/src/app
 
-COPY package*.json ./
+COPY ./Server/package*.json ./Server
 RUN npm ci ./Server
 RUN pip install -r ./Python/requirements.txt
 COPY . .
