@@ -1,36 +1,24 @@
-# Use the official Python image from the Docker Hub
-FROM python:3.9-slim as python-build
+# Use a base image with Python and Node.js pre-installed
+FROM python:3.9-slim AS python_node
 
-# Set the working directory
+# Set working directory
 WORKDIR /app
 
-# Copy the Python script and requirements.txt into the container
-COPY Python/requirements.txt Python/
+# Copy Python requirements file
+COPY Python/requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r Python/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the Python application
-COPY Python/ .
-
-# Use the official Node.js image from the Docker Hub
-FROM node:14-alpine as node-build
-
-# Set the working directory
-WORKDIR /app
-
-# Copy the Node.js application code
+# Copy Node.js code
 COPY Server/ .
 
 # Install Node.js dependencies
+RUN apt-get update && apt-get install -y nodejs npm
 RUN npm install
 
-# Copy the Python environment into the final container
-COPY --from=python-build /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
-COPY --from=python-build /app /app
-
-# Expose the port the app runs on
+# Expose port 3000 for the Node.js server
 EXPOSE 3000
 
-# Define the command to run your application
+# Command to run the Node.js server
 CMD ["node", "index.js"]
