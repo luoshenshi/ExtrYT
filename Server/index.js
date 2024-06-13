@@ -11,7 +11,6 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Correctly set the static files directory
 app.use(express.static(path.join(__dirname, '../Public')));
 app.use(bodyParser.json());
 
@@ -83,7 +82,6 @@ app.get("/videoInfo", (req, res) => {
   });
 });
 
-// Handle root route
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, '../Public/index.html'));
 });
