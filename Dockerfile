@@ -4,17 +4,23 @@ FROM python:3.9-slim AS python_node
 # Set working directory
 WORKDIR /app
 
-# Copy Python requirements file
+# Copy Python requirements file and install Python dependencies
 COPY Python/requirements.txt .
-
-# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy Node.js code
-COPY Server/ .
+# Install Node.js and npm
+RUN apt-get update && apt-get install -y nodejs npm
+
+# Copy all necessary files to the container
+COPY Server/ /app/server/
+COPY Public/ /app/public/
+COPY Cache/ /app/cache/
+COPY Out/ /app/out/
+COPY Python/ /app/python/
+COPY . /app/
 
 # Install Node.js dependencies
-RUN apt-get update && apt-get install -y nodejs npm
+WORKDIR /app/server
 RUN npm install
 
 # Expose port 3000 for the Node.js server
