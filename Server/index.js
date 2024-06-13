@@ -11,7 +11,8 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(express.static(path.join(__dirname.replace("Server", "Public"))));
+// Correctly set the static files directory
+app.use(express.static(path.join(__dirname, '../Public')));
 app.use(bodyParser.json());
 
 app.post("/download", async (req, res) => {
@@ -29,10 +30,7 @@ app.post("/download", async (req, res) => {
         format.mimeType === 'video/mp4; codecs="avc1.42001E, mp4a.40.2"'
     );
 
-    const videoPath = path.join(
-      __dirname.replace("Server", "Cache"),
-      "video.mp4"
-    );
+    const videoPath = path.join(__dirname, '../Cache/video.mp4');
 
     const output = fs.createWriteStream(videoPath);
 
@@ -41,17 +39,14 @@ app.post("/download", async (req, res) => {
       .pipe(output)
       .on("finish", () => {
         exec(
-          `python ../Python/slowAndReverb.py ${videoPath} ${speed} ${roomSize} ${dryLevel} ${wetLevel} ./Out/output.wav`,
+          `python ../Python/slowAndReverb.py ${videoPath} ${speed} ${roomSize} ${dryLevel} ${wetLevel} ../Out/output.wav`,
           (error, stdout, stderr) => {
             if (error) {
               console.error(`exec error: ${error}`);
               res.status(500).send("Error processing video");
               return;
             }
-            const audioFilePath = path.join(
-              __dirname.replace("Server", "Out"),
-              "output.wav"
-            );
+            const audioFilePath = path.join(__dirname, '../Out/output.wav');
             console.log(audioFilePath);
 
             res.setHeader(
@@ -86,6 +81,11 @@ app.get("/videoInfo", (req, res) => {
   ytdl.getInfo(videoUrl).then((info) => {
     res.json(info.videoDetails);
   });
+});
+
+// Handle root route
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, '../Public/index.html'));
 });
 
 app.listen(3000, () => {
