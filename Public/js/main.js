@@ -1,16 +1,34 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const youtubeUrlInput = document.querySelector('.form-control[placeholder="YouTube Url"]');
+  const youtubeUrlInput = document.querySelector(
+    '.form-control[placeholder="YouTube Url"]'
+  );
 
   const ranges = [
-    { range: document.getElementById("customRange1"), number: document.getElementById("customRange1Value") },
-    { range: document.getElementById("customRange2"), number: document.getElementById("customRange2Value") },
-    { range: document.getElementById("customRange3"), number: document.getElementById("customRange3Value") },
-    { range: document.getElementById("customRange4"), number: document.getElementById("customRange4Value") }
+    {
+      range: document.getElementById("customRange1"),
+      number: document.getElementById("customRange1Value"),
+    },
+    {
+      range: document.getElementById("customRange2"),
+      number: document.getElementById("customRange2Value"),
+    },
+    {
+      range: document.getElementById("customRange3"),
+      number: document.getElementById("customRange3Value"),
+    },
+    {
+      range: document.getElementById("customRange4"),
+      number: document.getElementById("customRange4Value"),
+    },
   ];
 
   ranges.forEach(({ range, number }) => {
-    range.addEventListener("input", () => { number.value = range.value; });
-    number.addEventListener("input", () => { range.value = number.value; });
+    range.addEventListener("input", () => {
+      number.value = range.value;
+    });
+    number.addEventListener("input", () => {
+      range.value = number.value;
+    });
   });
 
   const downloadButton = document.querySelector(".btn.btn-primary");
@@ -29,7 +47,9 @@ document.addEventListener("DOMContentLoaded", () => {
       text: "Please wait...",
       allowOutsideClick: false,
       showConfirmButton: false,
-      willOpen: () => { Swal.showLoading(); }
+      willOpen: () => {
+        Swal.showLoading();
+      },
     });
 
     try {
@@ -46,17 +66,25 @@ document.addEventListener("DOMContentLoaded", () => {
         text: "Please wait while we process the video...",
         allowOutsideClick: false,
         showConfirmButton: false,
-        willOpen: () => { Swal.showLoading(); }
+        willOpen: () => {
+          Swal.showLoading();
+        },
       });
 
       const headersList = { Accept: "*/*", "Content-Type": "application/json" };
-      const bodyContent = JSON.stringify({ youtubeUrl, speed, roomSize, wetLevel, dryLevel });
+      const bodyContent = JSON.stringify({
+        youtubeUrl,
+        speed,
+        roomSize,
+        wetLevel,
+        dryLevel,
+      });
 
       try {
         const downloadResponse = await fetch("/download", {
           method: "POST",
           body: bodyContent,
-          headers: headersList
+          headers: headersList,
         });
 
         if (!downloadResponse.ok) {
