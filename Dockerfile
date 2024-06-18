@@ -14,6 +14,9 @@ RUN apt-get update && apt-get install -y nodejs npm
 # Copy all necessary files to the container
 COPY . /app/
 
+# Check if package.json is present
+RUN ls /app/server
+
 # Install Node.js dependencies
 WORKDIR /app/server
 RUN npm install
