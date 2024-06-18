@@ -12,11 +12,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN apt-get update && apt-get install -y nodejs npm
 
 # Copy all necessary files to the container
-COPY Server/ /app/server/
-COPY Public/ /app/public/
-COPY Cache/ /app/cache/
-COPY Out/ /app/out/
-COPY Python/ /app/python/
 COPY . /app/
 
 # Install Node.js dependencies
