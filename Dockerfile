@@ -1,28 +1,23 @@
-# Use a base image with Python and Node.js pre-installed
 FROM python:3.9-slim AS python_node
 
-# Set working directory
 WORKDIR /app
 
-# Copy Python requirements file and install Python dependencies
-COPY Python/requirements.txt .
+COPY Python/requirements.txt ./requirements.txt
+
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Node.js and npm
-RUN apt-get update && apt-get install -y nodejs npm
+RUN apt-get update && apt-get install -y nodejs npm && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy all necessary files to the container
+COPY server /app/server/
 COPY . /app/
 
-# Verify that /app/server directory exists and contains package.json
-RUN ls /app && ls /app/server && ls /app/server/package.json
+RUN ls -la /app && ls -la /app/server || echo "server/ directory missing" \
+    && ls -la /app/server/package.json || echo "package.json missing"
 
-# Install Node.js dependencies
 WORKDIR /app/server
+
 RUN npm install
 
-# Expose port 3000 for the Node.js server
 EXPOSE 3000
 
-# Command to run the Node.js server
 CMD ["node", "index.js"]
