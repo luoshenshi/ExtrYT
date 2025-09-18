@@ -12,8 +12,8 @@ COPY node/package*.json ./node/
 RUN cd node && npm install
 
 # Copy Python files and install deps
-COPY python/requirements.txt ./python/
-RUN pip3 install -r python/requirements.txt
+COPY Python/requirements.txt ./Python/
+RUN pip3 install -r Python/requirements.txt
 
 # Copy the rest of the code
 COPY . .
