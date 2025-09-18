@@ -11,7 +11,6 @@ const ffmpegPath = require("ffmpeg-static");
 
 let audioTitle;
 
-// Tell fluent-ffmpeg to use the static binary
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
@@ -79,7 +78,7 @@ app.post("/getVideos", async (req, res) => {
           videoId: item.id,
         };
 
-        res.write(JSON.stringify(payload) + "\n"); // send chunk
+        res.write(JSON.stringify(payload) + "\n");
       } catch (err) {
         console.warn(`Failed to fetch video info for ${item.id}:`, err.message);
       }
@@ -179,7 +178,7 @@ function downloadMp3(videoUrl) {
   return new Promise((resolve, reject) => {
     ffmpeg(ytdl(videoUrl, { quality: "highestaudio" }))
       .audioBitrate(128)
-      .format("mp3") // ensure output format is MP3
+      .format("mp3")
       .save(__dirname + "/cache/audio.mp3")
       .on("progress", (p) => {
         console.log(`Processing: ${p.targetSize} KB done`);
