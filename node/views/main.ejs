@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Audio Effects Controller</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="/js/CustomKnob.js"></script> <!-- Assuming CustomKnob is in a public 'js' folder -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      #downloadBtn {
+        user-select: none;
+      }
+      /* Styles to ensure knob labels are fully visible */
+      .knob-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        color: #585076;
+        text-align: center;
+      }
+      /* This targets the component and assumes its label is text content */
+      .knob-wrapper knob-component {
+        white-space: normal; /* Allow text to wrap */
+        word-break: break-word; /* Break long words if necessary */
+        font-size: 0.875rem; /* 14px */
+        line-height: 1.25rem; /* 20px */
+        font-weight: 500;
+        min-height: 40px; /* Ensure space for two lines */
+        display: flex;
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body class="antialiased font-['Inter'] bg-purple-50 text-gray-800">
+    <div class="flex flex-col items-center justify-start min-h-screen p-4 py-12">
+      <main class="w-full max-w-6xl p-6 md:p-8 bg-white/70 backdrop-blur-md rounded-2xl shadow-lg border border-purple-200">
+        <header class="text-center mb-8">
+          <h1 class="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-indigo-600">
+            Audio Effects Controller
+          </h1>
+          <a href="/" class="text-purple-600 hover:text-purple-800 transition-colors">&larr; Back to search</a>
+        </header>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 mt-8">
+          
+          <!-- Left Column: Video Info -->
+          <div class="lg:col-span-2">
+            <div class="sticky top-8">
+              <img
+                src="https://i.ytimg.com/vi/<%= videoId %>/maxresdefault.jpg"
+                alt="<%= title %>"
+                class="rounded-xl border border-purple-200 shadow-lg object-cover w-full aspect-video"
+                onerror="this.onerror=null;this.src='https://i.ytimg.com/vi/<%= videoId %>/hqdefault.jpg';"
+              />
+              <h3 class="mt-4 text-xl font-bold text-purple-900 text-center lg:text-left">
+                <%= title %>
+              </h3>
+            </div>
+          </div>
+
+          <!-- Right Column: Controls -->
+          <div class="lg:col-span-3 flex flex-col gap-8">
+            <!-- Reverb Settings Panel -->
+            <section class="p-6 bg-purple-100/50 rounded-xl border border-purple-200">
+              <h2 class="text-2xl font-semibold mb-6 text-center text-purple-800">
+                Reverb
+              </h2>
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-8 justify-items-center">
+                <div class="knob-wrapper">
+                  <knob-component label="Room Size" value="0.7" min="0" max="1" step="0.01"></knob-component>
+                </div>
+                <div class="knob-wrapper">
+                  <knob-component label="Damping" value="0.5" min="0" max="1" step="0.01"></knob-component>
+                </div>
+                <div class="knob-wrapper">
+                  <knob-component label="Wet Level" value="0.35" min="0" max="1" step="0.01"></knob-component>
+                </div>
+                <div class="knob-wrapper">
+                  <knob-component label="Dry Level" value="0.9" min="0" max="1" step="0.01"></knob-component>
+                </div>
+                <div class="knob-wrapper">
+                  <knob-component label="Width" value="0.9" min="0" max="1" step="0.01"></knob-component>
+                </div>
+              </div>
+            </section>
+
+            <!-- Speed Settings Panel -->
+            <section class="p-6 bg-purple-100/50 rounded-xl border border-purple-200 flex flex-col items-center justify-center">
+              <h2 class="text-2xl font-semibold mb-6 text-center text-purple-800">
+                Speed
+              </h2>
+              <div class="knob-wrapper">
+                <knob-component label="Speed" value="1.0" min="0.5" max="2.0" step="0.05"></knob-component>
+              </div>
+            </section>
+            
+            <!-- Download Button -->
+            <section class="w-full text-center mt-4">
+              <button
+                id="downloadBtn"
+                class="w-full px-6 py-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold rounded-xl shadow-lg hover:scale-[1.03] transition-transform duration-200 focus:outline-none focus:ring-4 focus:ring-purple-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+              >
+                Apply Effects & Download
+              </button>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const knobs = document.querySelectorAll("knob-component");
+        const downloadBtn = document.getElementById("downloadBtn");
+
+        downloadBtn.addEventListener("click", function () {
+          downloadBtn.textContent = "Processing...";
+          downloadBtn.disabled = true;
+
+          // First, download the original audio
+          fetch("/download", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ videoUrl: "https://www.youtube.com/watch?v=<%= videoId %>" }),
+          })
+          .then(response => {
+              if (response.status !== 202) {
+                  throw new Error('Initial download failed.');
+              }
+              // Then, apply the filters
+              return fetch("/applyFilters", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  roomSize: knobs[0].value,
+                  damping: knobs[1].value,
+                  wetLevel: knobs[2].value,
+                  dryLevel: knobs[3].value,
+                  width: knobs[4].value,
+                  speed: knobs[5].value,
+                }),
+              });
+          })
+          .then(response => {
+              if (!response.ok) {
+                  throw new Error('Applying filters failed.');
+              }
+              return response.blob();
+          })
+          .then(blob => {
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.style.display = "none";
+              a.href = url;
+              a.download = `<%= title.replace(/[^a-zA-Z0-9 ]/g, '') %>.mp3`;
+              document.body.appendChild(a);
+              a.click();
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(a);
+              
+              downloadBtn.textContent = "Apply Effects & Download";
+              downloadBtn.disabled = false;
+          })
+          .catch(error => {
+              console.error('Download process failed:', error);
+              downloadBtn.textContent = "Error! Try Again";
+              downloadBtn.disabled = false;
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

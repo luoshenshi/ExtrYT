@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Audio Effects Controller</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script
+      type="module"
+      src="https://cdn.jsdelivr.net/npm/ldrs/dist/auto/newtonsCradle.js"
+    ></script>
+    <style>
+      /* Custom scrollbar for suggestions */
+      #suggestions-container::-webkit-scrollbar {
+        width: 8px;
+      }
+      #suggestions-container::-webkit-scrollbar-track {
+        background: #ede9fe; /* lighter purple */
+      }
+      #suggestions-container::-webkit-scrollbar-thumb {
+        background-color: #a78bfa; /* medium purple */
+        border-radius: 10px;
+        border: 2px solid #ede9fe;
+      }
+    </style>
+  </head>
+  <body class="antialiased font-['Inter'] bg-purple-50 text-gray-800">
+    <div
+      class="flex flex-col items-center justify-start min-h-screen p-4 pt-12"
+    >
+      <main
+        class="w-full max-w-3xl p-6 md:p-8 bg-white/70 backdrop-blur-md rounded-2xl shadow-lg border border-purple-200"
+        id="main-container"
+      >
+        <header class="text-center mb-8">
+          <h1
+            class="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-indigo-600"
+          >
+            Audio Effects Controller
+          </h1>
+          <p class="text-gray-500 mt-2">
+            Search for an audio source and tweak the settings below.
+          </p>
+        </header>
+
+        <!-- Search Section -->
+        <section class="mb-6 p-6 bg-purple-100/50 rounded-xl border border-purple-200">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <!-- Input and Suggestions Wrapper -->
+            <div class="flex-grow w-full relative">
+              <label
+                for="youtube-text"
+                class="block text-sm font-medium text-purple-700 mb-2"
+              >
+                Video Name
+              </label>
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  id="youtube-text"
+                  placeholder="Start typing a video name..."
+                  autocomplete="off"
+                  class="w-full rounded-lg border border-purple-300 bg-white px-4 py-2 text-sm text-gray-700 placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 shadow-sm transition-all duration-200 ease-in-out"
+                />
+                <button id="search-button" class="px-5 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all duration-200 ease-in-out shadow-md flex-shrink-0">
+                  Search
+                </button>
+              </div>
+              <!-- Suggestions Dropdown -->
+              <div
+                id="suggestions-container"
+                class="absolute z-10 w-full mt-1 bg-white border border-purple-200 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden"
+              ></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Loading Indicator -->
+        <div id="loading-indicator" class="hidden justify-center py-8">
+             <l-newtons-cradle
+                size="60"
+                speed="1.4"
+                color="#7c3aed"
+            ></l-newtons-cradle>
+        </div>
+       
+
+        <!-- Video Results Container -->
+        <div id="video-results-container" class="mt-8"></div>
+      </main>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const youtubeText = document.getElementById("youtube-text");
+        const searchButton = document.getElementById("search-button");
+        const suggestionsContainer = document.getElementById("suggestions-container");
+        const videoResultsContainer = document.getElementById("video-results-container");
+        const loadingIndicator = document.getElementById("loading-indicator");
+        let debounceTimer;
+
+        // --- Fetch Suggestions from YouTube ---
+        async function fetchYouTubeSuggestions(query) {
+          if (!query) return [];
+          try {
+            const response = await fetch(`/getSuggestions`, {
+              method: "POST",
+              headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({ query }),
+            });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            return data.suggestions;
+          } catch (error) {
+            console.error("Could not fetch YouTube suggestions:", error);
+            return [];
+          }
+        }
+        
+        // --- Performs the search and handles video stream ---
+        async function performSearch(query) {
+            if (!query) return;
+
+            // Clear previous results and hide suggestions
+            videoResultsContainer.innerHTML = '';
+            suggestionsContainer.classList.add("hidden");
+            loadingIndicator.style.display = 'flex';
+
+            try {
+                const response = await fetch("/getVideos", {
+                    method: "POST",
+                    body: JSON.stringify({ query }),
+                    headers: { "Content-Type": "application/json" },
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buf = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buf += decoder.decode(value, { stream: true });
+
+                    let lines = buf.split("\n");
+                    buf = lines.pop(); // Keep the last, possibly incomplete, line
+                    for (const line of lines) {
+                        if (line.trim()) {
+                            const video = JSON.parse(line);
+                            displayVideo(video);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching videos:", error);
+                videoResultsContainer.innerHTML = `<p class="text-center text-red-500">Failed to load videos. Please try again.</p>`;
+            } finally {
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+
+        // --- Display a single video item ---
+        function displayVideo(video) {
+          // Improved, smaller video item design
+          const videoHtml = `
+            <div class="flex items-center gap-4 p-3 bg-white/60 rounded-xl border border-purple-200 shadow-sm hover:shadow-md hover:border-purple-300 transition-all duration-200 mb-4">
+              <div class="flex-shrink-0">
+                <a href="/download?videoId=${video.videoId}&title=${encodeURIComponent(video.title)}">
+                  <img src="${video.thumbnail}" alt="${video.title}" class="w-32 h-20 object-cover rounded-lg"/>
+                </a>
+              </div>
+              <div class="flex-grow overflow-hidden">
+                <h3 class="text-md font-semibold text-purple-900 truncate" title="${video.title}">
+                  <a href="/download?videoId=${video.videoId}&title=${encodeURIComponent(video.title)}" class="hover:underline">
+                    ${video.title}
+                  </a>
+                </h3>
+                <p class="text-sm text-gray-600">${video.channelName}</p>
+                <div class="flex items-center gap-4 text-xs text-gray-500 mt-2">
+                  <span>⏱️ ${video.duration}</span>
+                  <span>💾 ${video.size}</span>
+                </div>
+              </div>
+            </div>
+          `;
+          videoResultsContainer.insertAdjacentHTML("beforeend", videoHtml);
+        }
+
+        // --- Display Suggestions in the Dropdown ---
+        function displaySuggestions(suggestions) {
+          suggestionsContainer.innerHTML = "";
+          if (suggestions.length === 0) {
+            suggestionsContainer.classList.add("hidden");
+            return;
+          }
+
+          suggestions.forEach((suggestion) => {
+            const suggestionItem = document.createElement("div");
+            suggestionItem.textContent = suggestion;
+            suggestionItem.className = "px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-purple-100 transition-colors duration-150";
+            
+            suggestionItem.addEventListener("click", () => {
+              youtubeText.value = suggestion;
+              performSearch(suggestion);
+            });
+
+            suggestionsContainer.appendChild(suggestionItem);
+          });
+
+          suggestionsContainer.classList.remove("hidden");
+        }
+
+        // --- Event Listener for Input ---
+        youtubeText.addEventListener("input", () => {
+          clearTimeout(debounceTimer);
+          const query = youtubeText.value.trim();
+
+          if (query.length === 0) {
+            suggestionsContainer.classList.add("hidden");
+            suggestionsContainer.innerHTML = "";
+            return;
+          }
+
+          debounceTimer = setTimeout(() => {
+            fetchYouTubeSuggestions(query).then(displaySuggestions);
+          }, 250);
+        });
+        
+        // --- Event listener for the search button ---
+        searchButton.addEventListener("click", () => {
+            const query = youtubeText.value.trim();
+            performSearch(query);
+        });
+        
+        // --- Event listener for 'Enter' key in textbox ---
+        youtubeText.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault(); // Prevent form submission if it's in a form
+                const query = youtubeText.value.trim();
+                performSearch(query);
+            }
+        });
+
+        // --- Close Dropdown on Outside Click ---
+        document.addEventListener("click", (event) => {
+          if (!youtubeText.contains(event.target) && !suggestionsContainer.contains(event.target) && !searchButton.contains(event.target)) {
+            suggestionsContainer.classList.add("hidden");
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

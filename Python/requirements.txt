@@ -1,4 +1,3 @@
-asyncio
-pydub
-moviepy
+numpy
+librosa
 pedalboard
