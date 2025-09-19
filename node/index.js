@@ -64,25 +64,27 @@ app.post("/getVideos", async (req, res) => {
     const items = data.items || [];
 
     for (const item of items) {
-      try {
-        const videoUrl = `https://www.youtube.com/watch?v=${item.id}`;
-        const video = await ytdl.getBasicInfo(videoUrl);
+  try {
+    const videoUrl = `https://www.youtube.com/watch?v=${item.id}`;
+    const video = await ytdl.getBasicInfo(videoUrl);
 
-        const payload = {
-          title: item.title,
-          duration: item.duration,
-          size: item.size,
-          channelName: item.channelTitle,
-          thumbnail: video.videoDetails.thumbnails.at(-1).url,
-          videoUrl,
-          videoId: item.id,
-        };
+    const payload = {
+      title: item.title,
+      duration: item.duration,
+      size: item.size,
+      channelName: item.channelTitle,
+      thumbnail: video.videoDetails.thumbnails.at(-1).url,
+      videoUrl,
+      videoId: item.id,
+    };
 
-        res.write(JSON.stringify(payload) + "\n");
-      } catch (err) {
-        console.warn(`Failed to fetch video info for ${item.id}:`, err.message);
-      }
-    }
+    res.write(JSON.stringify(payload) + "\n");
+
+    await sleep(1000); // wait 1s before next request
+  } catch (err) {
+    console.warn(`Failed to fetch video info for ${item.id}:`, err.message);
+  }
+}
 
     res.end();
   } catch (error) {
@@ -190,6 +192,10 @@ function downloadMp3(videoUrl) {
         reject(err);
       });
   });
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 app.listen(port, () => {
