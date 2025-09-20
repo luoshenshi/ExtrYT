@@ -9,12 +9,44 @@ const path = require("path");
 const ffmpeg = require("fluent-ffmpeg");
 const ffmpegPath = require("ffmpeg-static");
 
-let audioTitle;
+const suggestionsCache = new Map();
+const videosCache = new Map();
+
+let rateLimit429Count = 0;
+
+async function axiosGetWithRetry(url, opts = {}) {
+  const maxAttempts = opts.maxAttempts || 4;
+  const baseDelay = opts.baseDelay || 300;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await axios.get(url, opts.axiosConfig || {});
+      return response;
+    } catch (err) {
+      const status = err && err.response && err.response.status;
+
+      if (status && status !== 429 && status >= 400 && status < 500) {
+        throw err;
+      }
+
+      if (status === 429) {
+        rateLimit429Count++;
+        console.warn(`Received 429 from ${url} (attempt ${attempt})`);
+      }
+
+      if (attempt === maxAttempts) throw err;
+
+      const jitter = Math.floor(Math.random() * 100);
+      const delay = Math.pow(2, attempt - 1) * baseDelay + jitter;
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+}
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 app.set("view engine", "ejs");
 
@@ -34,18 +66,40 @@ app.post("/getSuggestions", async (req, res) => {
   if (!query) {
     return res.status(400).json({ error: "Missing 'query' in body" });
   }
-
   try {
+    const cacheKey = `s:${query}`;
+    const cached = suggestionsCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return res.json({ suggestions: cached.value });
+    }
+
     const url = `https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(
       query
     )}`;
 
-    const { data } = await axios.get(url);
+    const { data } = await axiosGetWithRetry(url, { maxAttempts: 3 });
+    const suggestions = (data && data[1]) || [];
 
-    const suggestions = data[1];
+    suggestionsCache.set(cacheKey, {
+      value: suggestions,
+      expiresAt: Date.now() + 5 * 60 * 1000,
+    });
+
     res.json({ suggestions });
   } catch (error) {
-    console.error("Error fetching suggestions:", error.message);
+    console.error(
+      "Error fetching suggestions:",
+      error && error.message ? error.message : error
+    );
+    const status = error && error.response && error.response.status;
+    if (status === 429) {
+      const retryAfter =
+        error.response.headers && error.response.headers["retry-after"];
+      if (retryAfter) res.setHeader("Retry-After", retryAfter);
+      return res
+        .status(429)
+        .json({ error: "Rate limited by upstream (429). Try again later." });
+    }
     res.status(500).json({ error: "Error fetching suggestions" });
   }
 });
@@ -57,46 +111,71 @@ app.post("/getVideos", async (req, res) => {
   res.setHeader("Content-Type", "application/x-ndjson");
 
   try {
+    const cacheKey = `v:${query}`;
+    const cached = videosCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      for (const p of cached.value) res.write(JSON.stringify(p) + "\n");
+      return res.end();
+    }
+
     const url = `https://wwd.mp3juice.blog/search.php?q=${encodeURIComponent(
       query
     )}`;
-    const { data } = await axios.get(url);
-    const items = data.items || [];
+    const { data } = await axiosGetWithRetry(url, { maxAttempts: 4 });
+    const items = (data && data.items) || [];
 
+    const results = [];
     for (const item of items) {
-  try {
-    const videoUrl = `https://www.youtube.com/watch?v=${item.id}`;
-    const video = await ytdl.getBasicInfo(videoUrl);
+      try {
+        const videoId = item.id;
+        const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-    const payload = {
-      title: item.title,
-      duration: item.duration,
-      size: item.size,
-      channelName: item.channelTitle,
-      thumbnail: video.videoDetails.thumbnails.at(-1).url,
-      videoUrl,
-      videoId: item.id,
-    };
+        const thumbnail = `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`;
 
-    res.write(JSON.stringify(payload) + "\n");
+        const payload = {
+          title: item.title,
+          duration: item.duration,
+          size: item.size,
+          channelName: item.channelTitle,
+          thumbnail,
+          videoUrl,
+          videoId,
+        };
 
-    await sleep(1000); // wait 1s before next request
-  } catch (err) {
-    console.warn(`Failed to fetch video info for ${item.id}:`, err.message);
-  }
-}
+        results.push(payload);
+        res.write(JSON.stringify(payload) + "\n");
+      } catch (err) {
+        console.warn(
+          `Failed to process item ${item && item.id}:`,
+          err && err.message ? err.message : err
+        );
+      }
+    }
+
+    videosCache.set(cacheKey, {
+      value: results,
+      expiresAt: Date.now() + 5 * 60 * 1000,
+    });
 
     res.end();
   } catch (error) {
-    console.error("Error fetching videos:", error.message);
+    console.error(
+      "Error fetching videos:",
+      error && error.message ? error.message : error
+    );
+    const status = error && error.response && error.response.status;
+    if (status === 429) {
+      const retryAfter =
+        error.response.headers && error.response.headers["retry-after"];
+      if (retryAfter) res.setHeader("Retry-After", retryAfter);
+      return res.status(429).end();
+    }
     res.status(500).end();
   }
 });
 
 app.get("/download", (req, res) => {
   const { videoId, title } = req.query;
-
-  audioTitle = title;
 
   res.render("main", {
     videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
@@ -194,10 +273,17 @@ function downloadMp3(videoUrl) {
   });
 }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
+  console.log(
+    `Initial cache sizes - suggestions: ${suggestionsCache.size}, videos: ${videosCache.size}`
+  );
+});
+
+app.get("/metrics", (req, res) => {
+  res.json({
+    rateLimit429Count,
+    suggestionsCacheSize: suggestionsCache.size,
+    videosCacheSize: videosCache.size,
+  });
 });
