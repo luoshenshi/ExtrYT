@@ -207,7 +207,7 @@ app.post("/applyFilters", (req, res) => {
   const final_output_path_mp3 =
     path.dirname(__dirname) + "/output/final_output.mp3";
   exec(
-    `python ./Python/main.py ${audioFilePath} ${speed} ${roomSize} ${damping} ${wetLevel} ${dryLevel} ${width}`,
+    `python3 ./Python/main.py ${audioFilePath} ${speed} ${roomSize} ${damping} ${wetLevel} ${dryLevel} ${width}`,
     (error, stdout, stderr) => {
       if (error) {
         console.error(`Error executing script: ${error.message}`);
