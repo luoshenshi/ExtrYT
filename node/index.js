@@ -257,7 +257,17 @@ app.post("/applyFilters", (req, res) => {
 
 function downloadMp3(videoUrl) {
   return new Promise((resolve, reject) => {
-    ffmpeg(ytdl(videoUrl, { quality: "highestaudio" }))
+    ffmpeg(
+      ytdl(videoUrl, {
+        requestOptions: {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            "Accept-Language": "en-US,en;q=0.9",
+          },
+        },
+        quality: "highestaudio",
+      })
+    )
       .audioBitrate(128)
       .format("mp3")
       .save(__dirname + "/cache/audio.mp3")
